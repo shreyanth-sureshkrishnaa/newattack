@@ -1,0 +1,4 @@
+flask>=2.3
+numpy>=1.24
+scipy>=1.11
+flask-cors>=4.0
