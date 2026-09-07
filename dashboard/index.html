@@ -32,8 +32,6 @@
           Start Payload
         </button>
         <div class="header-meta">
-          <span class="meta-item">Protocol: <strong>Teleportation QDS</strong></span>
-          <span class="meta-divider">&bull;</span>
           <span class="meta-item">Total Samples: <strong id="global-trial-count">0</strong></span>
           <span class="meta-divider">&bull;</span>
           <span class="meta-item">Alerts: <strong id="global-alert-count">0</strong></span>
@@ -205,7 +203,6 @@
               5. Raw Quantum Trial Inspector
             </button>
           </div>
-          <div class="active-badge" id="last-run-tag">H₀ Baseline (η=0.00)</div>
         </div>
 
         <!-- Tab 1: Primary Telemetry Waveforms + All Individual Trial Datapoints -->
@@ -214,17 +211,21 @@
             <div class="chart-box">
               <div class="chart-head">
                 <span class="chart-heading">Per-Trial QBER Outcomes &amp; Running Error Rate (All Datapoints)</span>
-                <span class="chart-subtext">Scatter: Individual Trial Decodes (Match / Error) &bull; Line: Cumulative QBER</span>
               </div>
               <div class="canvas-wrapper-large">
                 <canvas id="liveQberChart"></canvas>
               </div>
             </div>
 
-            <div class="chart-box">
-              <div class="chart-head">
-                <span class="chart-heading">Per-Trial CHSH Correlator Products &amp; S-Parameter (All Datapoints)</span>
-                <span class="chart-subtext" title="Tsirelson's bound 2√2 applies to expectation E[S]. Sample estimators fluctuate around 2.828 with σ_S ≈ 2/√N_pairs ≈ 0.18">Scatter: Single-Pair Outcome (s_A &bull; s_B) &bull; Line: Running S &bull; Tsirelson 2√2 ≈ 2.828</span>
+            <div class="chart-box chsh-vivid-card">
+              <div class="chart-head chsh-chart-head">
+                <div class="chart-title-group">
+                  <span class="chart-heading">Per-Trial CHSH Correlator Products &amp; S-Parameter (All Datapoints)</span>
+                </div>
+                <div class="chsh-telemetry-badge-row">
+                  <span id="chsh-live-status-pill" class="status-pill-quantum">Quantum Entangled (S &gt; 2.0)</span>
+                  <span id="chsh-live-s-readout" class="status-pill-metric">S = 2.828</span>
+                </div>
               </div>
               <div class="canvas-wrapper-large">
                 <canvas id="liveChshChart"></canvas>
@@ -345,7 +346,6 @@
       <div class="card alert-log-card">
         <div class="card-header-compact">
           <span class="section-label">REAL-TIME STATISTICAL ANOMALY &amp; ATTACK DETECTION LOG</span>
-          <span class="sub-label">Zero Machine Learning &bull; Closed-Form Gaussian Z-Score &amp; Pearson χ² (k=3)</span>
         </div>
         <div class="alert-log-scroll" id="live-alert-container">
           <div class="empty-log-state">
@@ -361,7 +361,7 @@
   <footer class="bottom-footer">
     <div class="footer-inner">
       <span><strong>Q-ATT&amp;CK</strong> &mdash; Quantum Digital Signature Threat Detection Framework</span>
-      <span>Pure State-Vector Physics &bull; Non-ML Statistical Inference &bull; MITRE ATT&amp;CK Mapped</span>
+      <span>Pure State-Vector Physics &bull; Live Telemetry Workbench</span>
     </div>
   </footer>
 
