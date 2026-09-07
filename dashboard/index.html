@@ -61,9 +61,9 @@
               <label for="modal-attack-type">Target Threat Vector</label>
               <select id="modal-attack-type" class="form-select">
                 <option value="clean">Clean Traffic (Null Hypothesis H₀)</option>
-                <option value="IR" selected>Intercept-Resend Attack (IR)</option>
+                <option value="IR">Intercept-Resend Attack (IR)</option>
                 <option value="EH">Entanglement Hijacking (EH)</option>
-                <option value="PF">Pauli Forgery (PF)</option>
+                <option value="PF" selected>Pauli Forgery (PF)</option>
                 <option value="CBM">Correction Bit Manipulation (CBM)</option>
               </select>
             </div>
@@ -78,9 +78,9 @@
             <div class="field-item">
               <div class="slider-title-line">
                 <label for="modal-slider-intensity">Attack Injection Intensity (η ∈ [0, 1])</label>
-                <span class="num-readout" id="modal-disp-intensity">0.50</span>
+                <span class="num-readout" id="modal-disp-intensity">0.70</span>
               </div>
-              <input type="range" id="modal-slider-intensity" class="slider-academic" min="0.0" max="1.0" step="0.05" value="0.50" />
+              <input type="range" id="modal-slider-intensity" class="slider-academic" min="0.0" max="1.0" step="0.05" value="0.70" />
             </div>
 
             <div class="field-item">
@@ -201,6 +201,9 @@
             </button>
             <button class="graph-tab" data-graph-tab="view-inspector">
               5. Raw Quantum Trial Inspector
+            </button>
+            <button class="graph-tab" data-graph-tab="view-security">
+              6. Channel Security &amp; Mitigations
             </button>
           </div>
         </div>
@@ -335,6 +338,190 @@
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+
+        <!-- Tab 6: Channel Security & Defensive Mitigations -->
+        <div class="graph-tab-content" id="view-security">
+          <div class="cs-tab-workspace">
+            
+            <!-- Channel Security Toggles Card -->
+            <div class="cs-panel-card">
+              <div class="cs-panel-header">
+                <div class="cs-header-left">
+                  <span class="cs-shield-icon">&#9673;</span>
+                  <div>
+                    <div class="cs-panel-title">Channel Security Mitigations</div>
+                    <div class="cs-panel-sub">Active defense layers &mdash; toggle parameters live against identical quantum attack batches</div>
+                  </div>
+                </div>
+                <button type="button" id="btn-run-comparison" class="btn-cs-compare">
+                  <svg class="btn-icon-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M9 3L5 7l4 4-1.5 1.5L2 7l5.5-5.5L9 3zm6 0l1.5 1.5L11 10l1.5 1.5L17 7l-5.5-5.5L13 0 9 3zm-3 18l-4-4 1.5-1.5L9 17l-1.5-1.5L12 21zm3 0l5.5-5.5L13 12l4-4-1.5-1.5L10 12l5.5 5.5L13 21z"/></svg>
+                  Run Comparison
+                </button>
+              </div>
+
+              <div class="cs-toggles-grid">
+
+                <!-- Toggle 1: Multi-Copy Distribution -->
+                <div class="cs-toggle-card" id="cs-card-multicopy">
+                  <div class="cs-toggle-top">
+                    <div class="cs-toggle-info">
+                      <div class="cs-toggle-name">Multi-Copy Distribution</div>
+                      <div class="cs-toggle-desc">Require N independent signature copies &mdash; forgery must fool all N simultaneously</div>
+                    </div>
+                    <div class="cs-n-readout">
+                      <span class="cs-n-label">N =</span>
+                      <span class="cs-n-value" id="cs-n-display">8</span>
+                    </div>
+                  </div>
+                  <div class="cs-slider-row">
+                    <span class="cs-slider-bound">1</span>
+                    <input type="range" id="cs-slider-n" class="cs-slider" min="1" max="64" step="1" value="8" />
+                    <span class="cs-slider-bound">64</span>
+                  </div>
+                  <div class="cs-forge-prob-row">
+                    <span class="cs-forge-label">Forge Probability:</span>
+                    <span class="cs-forge-pill" id="cs-forge-prob">(1/4)<sup>8</sup> &asymp; 1.53 &times; 10<sup>&minus;5</sup></span>
+                  </div>
+                </div>
+
+                <!-- Toggle 2: Nonce / Timestamp Binding -->
+                <div class="cs-toggle-card" id="cs-card-nonce">
+                  <div class="cs-toggle-top">
+                    <div class="cs-toggle-info">
+                      <div class="cs-toggle-name">Nonce / Timestamp Binding</div>
+                      <div class="cs-toggle-desc">Reject correction-bit pairs already seen this session &mdash; blocks replay attacks</div>
+                    </div>
+                    <label class="cs-switch" for="cs-toggle-nonce">
+                      <input type="checkbox" id="cs-toggle-nonce" role="switch" />
+                      <span class="cs-slider-pill"></span>
+                    </label>
+                  </div>
+                  <div class="cs-badge-row">
+                    <span class="cs-badge cs-badge-off" id="cs-nonce-status">OFF &mdash; Replayed bits flow to detector</span>
+                  </div>
+                </div>
+
+                <!-- Toggle 3: Dual Thresholding -->
+                <div class="cs-toggle-card" id="cs-card-dual">
+                  <div class="cs-toggle-top">
+                    <div class="cs-toggle-info">
+                      <div class="cs-toggle-name">Dual Thresholding</div>
+                      <div class="cs-toggle-desc">Accept only when NEITHER QBER alert NOR Pauli alert fires (vs QBER-only)</div>
+                    </div>
+                    <label class="cs-switch" for="cs-toggle-dual">
+                      <input type="checkbox" id="cs-toggle-dual" role="switch" />
+                      <span class="cs-slider-pill"></span>
+                    </label>
+                  </div>
+                  <div class="cs-badge-row">
+                    <span class="cs-badge cs-badge-off" id="cs-dual-status">OFF &mdash; Single QBER gate</span>
+                  </div>
+                </div>
+
+                <!-- Toggle 4: CHSH-Gated Signing -->
+                <div class="cs-toggle-card" id="cs-card-chsh">
+                  <div class="cs-toggle-top">
+                    <div class="cs-toggle-info">
+                      <div class="cs-toggle-name">CHSH-Gated Signing</div>
+                      <div class="cs-toggle-desc">Block all signings when session S &lt; 2.0 (classical Bell bound violated)</div>
+                    </div>
+                    <label class="cs-switch" for="cs-toggle-chsh">
+                      <input type="checkbox" id="cs-toggle-chsh" role="switch" />
+                      <span class="cs-slider-pill"></span>
+                    </label>
+                  </div>
+                  <div class="cs-badge-row">
+                    <span class="cs-badge cs-badge-off" id="cs-chsh-status">OFF &mdash; Signing proceeds regardless of S</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Compare to Unprotected Panel -->
+            <div class="compare-panel-card">
+              <div class="compare-panel-header">
+                <div class="compare-title">Compare to Unprotected</div>
+                <div class="compare-subtitle" id="compare-run-label">Same attack batch (same seed) &mdash; differing only in active Channel Security toggles</div>
+              </div>
+
+              <div class="compare-cards-row">
+
+                <!-- Unprotected Card -->
+                <div class="compare-result-card compare-unprotected" id="compare-card-unprotected">
+                  <div class="compare-card-header">
+                    <span class="compare-card-icon compare-icon-danger">&#9888;</span>
+                    <span class="compare-card-title">Unprotected Baseline</span>
+                    <span class="compare-card-tag">N = 1 &bull; All toggles OFF</span>
+                  </div>
+                  <div class="compare-metric primary-metric">
+                    <div class="compare-metric-label">Forgeries Accepted (Harm)</div>
+                    <div class="compare-metric-value danger-val" id="u-accepted-forgeries">&mdash;</div>
+                    <div class="compare-metric-sub" id="u-accepted-sub">Awaiting comparison run</div>
+                  </div>
+                  <div class="compare-metrics-row">
+                    <div class="compare-mini-metric">
+                      <div class="mini-label">Forge Probability</div>
+                      <div class="mini-value" id="u-forge-prob">&mdash;</div>
+                    </div>
+                    <div class="compare-mini-metric">
+                      <div class="mini-label">Alerts Raised</div>
+                      <div class="mini-value" id="u-alerts">&mdash;</div>
+                    </div>
+                    <div class="compare-mini-metric">
+                      <div class="mini-label">Session S</div>
+                      <div class="mini-value" id="u-chsh-s">&mdash;</div>
+                    </div>
+                    <div class="compare-mini-metric">
+                      <div class="mini-label">Error Trials</div>
+                      <div class="mini-value" id="u-n-errors">&mdash;</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Protected Card -->
+                <div class="compare-result-card compare-protected" id="compare-card-protected">
+                  <div class="compare-card-header">
+                    <span class="compare-card-icon compare-icon-safe">&#10003;</span>
+                    <span class="compare-card-title">Protected Mitigations</span>
+                    <span class="compare-card-tag" id="compare-prot-tag">Active toggle settings</span>
+                  </div>
+                  <div class="compare-metric primary-metric">
+                    <div class="compare-metric-label">Forgeries Accepted (Harm)</div>
+                    <div class="compare-metric-value safe-val" id="p-accepted-forgeries">&mdash;</div>
+                    <div class="compare-metric-sub" id="p-accepted-sub">Awaiting comparison run</div>
+                  </div>
+                  <div class="compare-metrics-row">
+                    <div class="compare-mini-metric">
+                      <div class="mini-label">Forge Probability</div>
+                      <div class="mini-value" id="p-forge-prob">&mdash;</div>
+                    </div>
+                    <div class="compare-mini-metric">
+                      <div class="mini-label">Alerts Raised</div>
+                      <div class="mini-value" id="p-alerts">&mdash;</div>
+                    </div>
+                    <div class="compare-mini-metric">
+                      <div class="mini-label">Session S</div>
+                      <div class="mini-value" id="p-chsh-s">&mdash;</div>
+                    </div>
+                    <div class="compare-mini-metric">
+                      <div class="mini-label">Blocked by CHSH</div>
+                      <div class="mini-value" id="p-chsh-blocked">&mdash;</div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Status / log line -->
+              <div class="compare-log-row" id="compare-log-row">
+                <span class="compare-log-idle">&#9711; Ready &mdash; configure toggles above and click Run Comparison</span>
+              </div>
+
+            </div>
+
           </div>
         </div>
 

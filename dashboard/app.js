@@ -36,6 +36,16 @@ const charts = {
 // ---------------------------------------------------------------------------
 // Initialization Entry Point
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Channel Security State
+// ---------------------------------------------------------------------------
+const channelSecurityState = {
+  multiCopyN:    8,
+  nonceBinding:  false,
+  dualThreshold: false,
+  chshGate:      false,
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   initGraphTabs();
   initModalEvents();
@@ -44,6 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchInitialConfig();
   fetchBenchmarkData();
   bindEventHandlers();
+  initChannelSecurity();
 });
 
 // ---------------------------------------------------------------------------
@@ -132,6 +143,11 @@ function initGraphTabs() {
       const targetPane = document.getElementById(targetId);
       if (targetPane) {
         targetPane.classList.add("active");
+      }
+
+      // If switching to Channel Security tab, auto-run comparison so results are live
+      if (targetId === "view-security") {
+        runChannelSecurityComparison();
       }
 
       setTimeout(() => {
@@ -970,6 +986,7 @@ async function runQuantumBatchFromModal(attackOverride = null) {
     if (!state.sseConnected) {
       renderBatchData(data);
     }
+    runChannelSecurityComparison();
   } catch (err) {
     console.error("Simulation run error:", err);
   }
@@ -1075,4 +1092,258 @@ function escapeHtml(str) {
     '"': "&quot;",
     "'": "&#39;",
   }[m]));
+}
+
+// ---------------------------------------------------------------------------
+// Channel Security Panel
+// ---------------------------------------------------------------------------
+
+/**
+ * Format (1/4)^N as a human-readable HTML string.
+ * For N <= 10 shows the exact decimal; for larger N shows scientific notation.
+ */
+function formatForgeProbHtml(n) {
+  const prob = Math.pow(0.25, n);
+  const exp = n * Math.log10(4);        // log10(4^n)
+  const expInt = Math.floor(exp);
+  const mantissa = Math.pow(10, exp - expInt);
+
+  if (n === 1) {
+    return `(1/4)<sup>1</sup> = 0.25`;
+  }
+  if (n <= 8) {
+    return `(1/4)<sup>${n}</sup> &asymp; ${prob.toExponential(2)}`;
+  }
+  return `(1/4)<sup>${n}</sup> &asymp; ${mantissa.toFixed(2)} &times; 10<sup>&minus;${expInt}</sup>`;
+}
+
+/** Update the live forge-prob pill display */
+function updateForgeProbDisplay(n) {
+  const pill = document.getElementById("cs-forge-prob");
+  const nDisplay = document.getElementById("cs-n-display");
+  if (!pill || !nDisplay) return;
+
+  nDisplay.textContent = n;
+  pill.innerHTML = formatForgeProbHtml(n);
+
+  // Color: green when N >= 8 (prob < 1.5e-5), else dark slate
+  if (n >= 8) {
+    pill.classList.add("safe");
+  } else {
+    pill.classList.remove("safe");
+  }
+}
+
+/** Sync toggle badge text and card active state */
+function updateToggleBadge(toggleId, badgeId, cardId, onText, offText) {
+  const el = document.getElementById(toggleId);
+  const badge = document.getElementById(badgeId);
+  const card = document.getElementById(cardId);
+  if (!el || !badge || !card) return;
+
+  const isOn = el.checked;
+  badge.textContent = isOn ? onText : offText;
+  badge.className = isOn ? "cs-badge cs-badge-on" : "cs-badge cs-badge-off";
+  card.classList.toggle("cs-active", isOn);
+}
+
+let csDebounceTimer = null;
+
+/** Wire up all Channel Security toggle events */
+function initChannelSecurity() {
+  // N slider
+  const sliderN = document.getElementById("cs-slider-n");
+  if (sliderN) {
+    sliderN.addEventListener("input", () => {
+      const n = parseInt(sliderN.value, 10);
+      channelSecurityState.multiCopyN = n;
+      updateForgeProbDisplay(n);
+
+      // Debounce auto-run comparison when slider moves
+      if (csDebounceTimer) clearTimeout(csDebounceTimer);
+      csDebounceTimer = setTimeout(() => {
+        runChannelSecurityComparison();
+      }, 150);
+    });
+    // Initialise display
+    updateForgeProbDisplay(parseInt(sliderN.value, 10));
+  }
+
+  // Nonce Binding toggle
+  const nonceToggle = document.getElementById("cs-toggle-nonce");
+  if (nonceToggle) {
+    nonceToggle.addEventListener("change", () => {
+      channelSecurityState.nonceBinding = nonceToggle.checked;
+      updateToggleBadge(
+        "cs-toggle-nonce", "cs-nonce-status", "cs-card-nonce",
+        "ON — Replayed correction bits are rejected immediately",
+        "OFF — Replayed bits flow to detector"
+      );
+      runChannelSecurityComparison();
+    });
+  }
+
+  // Dual Threshold toggle
+  const dualToggle = document.getElementById("cs-toggle-dual");
+  if (dualToggle) {
+    dualToggle.addEventListener("change", () => {
+      channelSecurityState.dualThreshold = dualToggle.checked;
+      updateToggleBadge(
+        "cs-toggle-dual", "cs-dual-status", "cs-card-dual",
+        "ON — Reject if QBER alert OR Pauli alert fires",
+        "OFF — Single QBER gate"
+      );
+      runChannelSecurityComparison();
+    });
+  }
+
+  // CHSH Gate toggle
+  const chshToggle = document.getElementById("cs-toggle-chsh");
+  if (chshToggle) {
+    chshToggle.addEventListener("change", () => {
+      channelSecurityState.chshGate = chshToggle.checked;
+      updateToggleBadge(
+        "cs-toggle-chsh", "cs-chsh-status", "cs-card-chsh",
+        "ON — Batch blocked when S < 2.0 (classical bound)",
+        "OFF — Signing proceeds regardless of S"
+      );
+      runChannelSecurityComparison();
+    });
+  }
+
+  // Run Comparison button
+  const btnCompare = document.getElementById("btn-run-comparison");
+  if (btnCompare) {
+    btnCompare.addEventListener("click", () => {
+      runChannelSecurityComparison();
+    });
+  }
+
+  // Pre-populate comparison results in background on initial load
+  setTimeout(() => {
+    runChannelSecurityComparison();
+  }, 300);
+}
+
+/** Run the side-by-side comparison via the backend */
+async function runChannelSecurityComparison() {
+  const btn = document.getElementById("btn-run-comparison");
+  const logRow = document.getElementById("compare-log-row");
+
+  // Read current attack params from the modal (so comparison always follows user config)
+  const attackType  = (document.getElementById("modal-attack-type")?.value)  || "PF";
+  const intensity   = parseFloat(document.getElementById("modal-slider-intensity")?.value ?? "0.7");
+  const noiseLevel  = parseFloat(document.getElementById("modal-slider-noise")?.value ?? "0.02");
+  const nTrials     = parseInt(document.getElementById("modal-n-trials")?.value ?? "200", 10) || 200;
+
+  // Update UI to running state
+  if (btn) {
+    btn.classList.add("running");
+    btn.textContent = "Running…";
+  }
+  if (logRow) {
+    logRow.innerHTML = `<span class="compare-log-running cs-running-pulse">&#9654; Running ${attackType} @ η=${intensity.toFixed(2)} — same seed, unprotected vs protected…</span>`;
+  }
+
+  const payload = {
+    n_trials:     Math.min(nTrials, 500),
+    attack_type:  attackType,
+    intensity:    intensity,
+    noise_level:  noiseLevel,
+    // Protected settings from Channel Security panel state
+    multi_copy_n:    channelSecurityState.multiCopyN,
+    nonce_binding:   channelSecurityState.nonceBinding,
+    dual_threshold:  channelSecurityState.dualThreshold,
+    chsh_gate:       channelSecurityState.chshGate,
+    chsh_gate_threshold: 2.0,
+  };
+
+  try {
+    const res = await fetch("/api/channel-security/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    renderCompareCards(data);
+
+    if (logRow) {
+      const ts = new Date().toLocaleTimeString();
+      const u  = data.unprotected;
+      const p  = data.protected;
+      const reduction = u.accepted_forgeries > 0
+        ? Math.round((1 - p.accepted_forgeries / u.accepted_forgeries) * 100)
+        : 100;
+      const blocked = p.blocked_by_chsh ? " | Batch blocked by CHSH gate." : "";
+      logRow.innerHTML = `<span class="compare-log-done">&#10003; ${ts} — ${data.attack_type} @ η=${data.intensity.toFixed(2)}, N=${data.n_trials} trials. Forgery reduction: ${reduction}% (${u.accepted_forgeries} → ${p.accepted_forgeries}).${blocked}</span>`;
+    }
+  } catch (err) {
+    console.error("Channel Security comparison error:", err);
+    if (logRow) {
+      logRow.innerHTML = `<span class="compare-log-error">&#9888; Error: ${escapeHtml(err.message)}</span>`;
+    }
+  } finally {
+    if (btn) {
+      btn.classList.remove("running");
+      btn.innerHTML = `<svg class="btn-icon-svg" viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35A7.958 7.958 0 0 0 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0 1 12 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg> Run Comparison`;
+    }
+  }
+}
+
+/** Render both result cards with data from the API */
+function renderCompareCards(data) {
+  const u = data.unprotected;
+  const p = data.protected;
+  const pc = data.protection_config;
+
+  // ── Unprotected card ──────────────────────────────────────────────────
+  setText("u-accepted-forgeries", u.accepted_forgeries);
+  setText("u-accepted-sub",
+    `Out of ${u.n_errors} error trials, ${u.n_trials} total`
+  );
+  setText("u-forge-prob", `(1/4)¹ = 0.25`);
+  setText("u-alerts", u.alerts_raised);
+  setText("u-chsh-s", u.chsh_S.toFixed(3));
+  setText("u-n-errors", `${u.n_errors} / ${u.n_trials}`);
+
+  // ── Protected card ────────────────────────────────────────────────────
+  setText("p-accepted-forgeries", p.blocked_by_chsh ? "BLOCKED" : p.accepted_forgeries);
+  const pSub = p.blocked_by_chsh
+    ? `Entire batch blocked by CHSH gate (S = ${p.chsh_S.toFixed(3)} < 2.0)`
+    : `Out of ${p.n_errors} error trials, ${p.n_trials} total`;
+  setText("p-accepted-sub", pSub);
+
+  // Forge prob for protected
+  const fp = Math.pow(0.25, pc.multi_copy_n);
+  setText("p-forge-prob", fp < 1e-10
+    ? `(1/4)^${pc.multi_copy_n} ≈ ${fp.toExponential(1)}`
+    : `(1/4)^${pc.multi_copy_n} = ${fp.toFixed(6)}`
+  );
+  setText("p-alerts", p.alerts_raised);
+  setText("p-chsh-s", p.chsh_S.toFixed(3));
+  setText("p-chsh-blocked", p.blocked_by_chsh ? "YES ✕" : "No");
+
+  // Update compare panel subtitle tag
+  const activeToggles = [];
+  if (pc.multi_copy_n > 1)   activeToggles.push(`N=${pc.multi_copy_n}`);
+  if (pc.nonce_binding)       activeToggles.push("Nonce");
+  if (pc.dual_threshold)      activeToggles.push("Dual-Thresh");
+  if (pc.chsh_gate)           activeToggles.push("CHSH-Gate");
+  const tagEl = document.getElementById("compare-prot-tag");
+  if (tagEl) tagEl.textContent = activeToggles.length ? activeToggles.join(" · ") : "N=1, all toggles off";
+
+  const subtitleEl = document.getElementById("compare-run-label");
+  if (subtitleEl) subtitleEl.textContent =
+    `Last run: ${data.attack_type} @ η=${data.intensity.toFixed(2)}, noise=${data.noise_level.toFixed(3)}, N=${data.n_trials} trials — same seed ${data.seed}`;
+}
+
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) el.textContent = String(val);
 }

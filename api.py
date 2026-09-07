@@ -31,7 +31,7 @@ from flask_cors import CORS
 
 from attacks import ATTACK_MAKERS, make_ir_attack, make_eh_attack, make_pf_attack, make_cbm_attack
 from benchmark import RESULTS_FILE, load_results
-from detectors import Alert, DetectorConfig, run_all_detectors, summarize
+from detectors import Alert, DetectorConfig, ProtectionConfig, run_all_detectors, run_protected_detectors, summarize
 from qds import run_batch
 
 # ---------------------------------------------------------------------------
@@ -330,6 +330,125 @@ def benchmark():
     if data is None:
         return jsonify({"error": "Benchmark not run yet. Run benchmark.py first."}), 404
     return jsonify(data)
+
+
+
+@app.route("/api/channel-security/run", methods=["POST"])
+def channel_security_run():
+    """
+    Run side-by-side Unprotected vs Protected comparison for the Channel Security panel.
+
+    Both batches run the SAME attack at the SAME seed, differing only in which
+    protection layers are active.
+
+    Body (JSON):
+        n_trials          int     (default 200)
+        attack_type       str     "clean"|"IR"|"EH"|"PF"|"CBM" (default "PF")
+        intensity         float   0.0–1.0 (default 0.7)
+        noise_level       float   0.0–0.15 (default 0.02)
+        seed              int     optional; if omitted a random seed is chosen
+                                  (both batches use the same seed)
+
+        # Protection toggles (Protected card):
+        multi_copy_n      int     1–64 (default 8)
+        nonce_binding     bool    (default false)
+        dual_threshold    bool    (default false)
+        chsh_gate         bool    (default false)
+        chsh_gate_threshold float (default 2.0)
+    """
+    body = request.get_json(silent=True) or {}
+
+    n_trials    = max(1, min(int(body.get("n_trials", 200)), 2000))
+    attack_type = body.get("attack_type", "PF")
+    intensity   = float(np.clip(body.get("intensity", 0.7), 0.0, 1.0))
+    noise_level = float(np.clip(body.get("noise_level", 0.02), 0.0, 0.3))
+    seed        = body.get("seed")
+
+    # Use a fixed random seed so both cards run the exact same trial sequence
+    if seed is None:
+        seed = int(np.random.default_rng().integers(0, 2**31))
+    seed = int(seed)
+
+    # Build attack function
+    attack_fn = None
+    if attack_type in ATTACK_MAKER_MAP:
+        attack_fn = ATTACK_MAKER_MAP[attack_type](intensity)
+
+    # Build protection configs
+    unprotected_cfg = ProtectionConfig(
+        multi_copy_n=1,
+        nonce_binding=False,
+        dual_threshold=False,
+        chsh_gate=False,
+    )
+    protected_cfg = ProtectionConfig(
+        multi_copy_n=int(np.clip(body.get("multi_copy_n", 8), 1, 64)),
+        nonce_binding=bool(body.get("nonce_binding", False)),
+        dual_threshold=bool(body.get("dual_threshold", False)),
+        chsh_gate=bool(body.get("chsh_gate", False)),
+        chsh_gate_threshold=float(body.get("chsh_gate_threshold", 2.0)),
+    )
+
+    try:
+        with _lock:
+            cfg_snapshot = DetectorConfig(
+                qber_null=_config.qber_null,
+                qber_alpha=_config.qber_alpha,
+                qber_min_trials=_config.qber_min_trials,
+                chsh_alpha=_config.chsh_alpha,
+                chsh_min_samples=_config.chsh_min_samples,
+                pauli_alpha=_config.pauli_alpha,
+                pauli_min_errors=_config.pauli_min_errors,
+                corr_alpha=_config.corr_alpha,
+                corr_min_trials=_config.corr_min_trials,
+            )
+
+        # Run SAME batch twice with identical seed → identical trial sequence
+        logs_u = run_batch(
+            n_trials, noise_p=noise_level,
+            rng=np.random.default_rng(seed),
+            attack_fn=attack_fn, attack_type=attack_type,
+            intensity=intensity,
+        )
+        logs_p = run_batch(
+            n_trials, noise_p=noise_level,
+            rng=np.random.default_rng(seed),
+            attack_fn=attack_fn, attack_type=attack_type,
+            intensity=intensity,
+        )
+
+        rng_u = np.random.default_rng(seed + 1)
+        rng_p = np.random.default_rng(seed + 2)
+
+        card_unprotected = run_protected_detectors(
+            logs_u, cfg_snapshot, unprotected_cfg,
+            seen_nonces=set(), rng=rng_u,
+        )
+        card_protected = run_protected_detectors(
+            logs_p, cfg_snapshot, protected_cfg,
+            seen_nonces=set(), rng=rng_p,
+        )
+
+        return jsonify({
+            "seed": seed,
+            "attack_type": attack_type,
+            "intensity": intensity,
+            "noise_level": noise_level,
+            "n_trials": n_trials,
+            "unprotected": card_unprotected,
+            "protected": card_protected,
+            "protection_config": {
+                "multi_copy_n": protected_cfg.multi_copy_n,
+                "nonce_binding": protected_cfg.nonce_binding,
+                "dual_threshold": protected_cfg.dual_threshold,
+                "chsh_gate": protected_cfg.chsh_gate,
+                "chsh_gate_threshold": protected_cfg.chsh_gate_threshold,
+            },
+        })
+
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/stream")

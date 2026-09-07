@@ -136,6 +136,174 @@ class DetectorConfig:
 
 
 # ---------------------------------------------------------------------------
+# Channel Security: ProtectionConfig
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ProtectionConfig:
+    """
+    Four independent defensive mitigations for the Channel Security panel.
+
+    Each toggle wraps or gates logic that already exists in the simulation;
+    no new quantum physics is introduced.
+
+    Attributes
+    ----------
+    multi_copy_n : int
+        Number of independent signature copies required (Multi-Copy Distribution).
+        forge_prob = (1/4) ** multi_copy_n
+        N=1  → unprotected baseline (forge_prob = 0.25)
+        N=64 → forge_prob ≈ 10^{-38} (protected)
+
+    nonce_binding : bool
+        When True, maintain a seen_nonces set of (m0, m1) correction-bit pairs
+        already used this session.  If correction_bits in seen_nonces, the trial
+        is rejected before replay/chi-squared detection runs.  Blocks replay attacks.
+
+    dual_threshold : bool
+        When False: accept trial unless qber_alert fires (existing behaviour).
+        When True:  accept trial only if NEITHER qber_alert NOR pauli_alert fires.
+        One boolean condition change; exposes the Pauli-consistency detector as
+        an additional acceptance gate rather than a pure alerting detector.
+
+    chsh_gate : bool
+        When True: compute session CHSH S over the batch first.  If S < chsh_gate_threshold,
+        all signings in that batch are blocked (no acceptance even if detectors are quiet).
+        When False: signings proceed regardless of S.
+
+    chsh_gate_threshold : float
+        CHSH S below which the gate fires.  Default 2.0 (classical Bell bound).
+    """
+    multi_copy_n:        int   = 1
+    nonce_binding:       bool  = False
+    dual_threshold:      bool  = False
+    chsh_gate:           bool  = False
+    chsh_gate_threshold: float = 2.0
+
+
+# ---------------------------------------------------------------------------
+# Channel Security: protection-aware batch evaluation
+# ---------------------------------------------------------------------------
+
+def run_protected_detectors(
+    logs:             "List[TrialLog]",
+    detector_config:  DetectorConfig,
+    protection:       ProtectionConfig,
+    seen_nonces:      "Optional[set]" = None,
+    rng:              "Optional[np.random.Generator]" = None,
+) -> Dict[str, Any]:
+    """
+    Evaluate a batch of TrialLogs through the active protection layers and
+    return a result card suitable for the Compare-to-Unprotected panel.
+
+    Protection layers applied in order
+    -----------------------------------
+    1. CHSH Gate  — if enabled and S < threshold, block the entire batch.
+    2. Nonce Binding — per trial: if (m0,m1) already in seen_nonces, reject.
+    3. Dual Threshold — per trial: reject if qber_alert OR pauli_alert would
+       fire (approximated per-trial via error-type inspection).
+    4. Multi-Copy — per accepted error trial: model whether the forgery beats
+       N independent signature copies via Bernoulli((1/4)^N).
+
+    Returns
+    -------
+    dict with keys:
+        accepted_forgeries  int    — error trials that slipped through all gates
+        rejected_by_nonce   int    — trials stopped by nonce binding
+        rejected_by_dual    int    — error trials stopped by dual threshold
+        blocked_by_chsh     bool   — entire batch blocked by CHSH gate
+        forge_prob          float  — (1/4) ** multi_copy_n
+        alerts_raised       int    — number of statistical alerts from detectors
+        chsh_S              float  — session CHSH S-value
+        n_trials            int    — total trials in batch
+        n_errors            int    — trials with is_error=True
+    """
+    if rng is None:
+        rng = np.random.default_rng()
+    if seen_nonces is None:
+        seen_nonces = set()
+
+    n = len(logs)
+    forge_prob = (1.0 / 4.0) ** protection.multi_copy_n
+
+    # ── Run standard detectors first (alerts, CHSH S) ─────────────────────
+    all_alerts = run_all_detectors(logs, detector_config)
+    chsh_samples = [
+        (l.chsh_alice_angle, l.chsh_bob_angle, l.chsh_alice_sign, l.chsh_bob_sign)
+        for l in logs
+    ]
+    from bell import compute_chsh_S
+    chsh_S, _ = compute_chsh_S(chsh_samples)
+
+    # ── CHSH Gate: block entire batch if S < threshold ─────────────────────
+    if protection.chsh_gate and chsh_S < protection.chsh_gate_threshold:
+        return {
+            "accepted_forgeries": 0,
+            "rejected_by_nonce": 0,
+            "rejected_by_dual": 0,
+            "blocked_by_chsh": True,
+            "forge_prob": forge_prob,
+            "alerts_raised": len(all_alerts),
+            "chsh_S": round(chsh_S, 5),
+            "n_trials": n,
+            "n_errors": sum(1 for l in logs if l.is_error),
+        }
+
+    # ── Per-trial protection evaluation ────────────────────────────────────
+    # Identify which detector names fired for quick per-trial gating.
+    alert_names = {a.detector for a in all_alerts}
+    qber_alert_fired  = "QBER" in alert_names
+    pauli_alert_fired = "PauliConsistency" in alert_names
+
+    accepted_forgeries = 0
+    rejected_by_nonce  = 0
+    rejected_by_dual   = 0
+
+    for log in logs:
+        if not log.is_error:
+            continue  # only error (forgery-attempt) trials matter
+
+        correction_key = (log.correction_m0, log.correction_m1)
+
+        # Gate 1 — Nonce Binding
+        if protection.nonce_binding:
+            if correction_key in seen_nonces:
+                rejected_by_nonce += 1
+                continue  # rejected before any detector
+            seen_nonces.add(correction_key)  # mark as seen
+
+        # Gate 2 — Dual Threshold
+        # Per-trial proxy: reject if the batch-level QBER alert fired AND
+        # the individual trial is an error; OR if pauli_alert fired and the
+        # error type is X (the Pauli Forgery signature).
+        if protection.dual_threshold:
+            caught_by_qber  = qber_alert_fired
+            caught_by_pauli = pauli_alert_fired and log.pauli_error_type == "X"
+            if caught_by_qber or caught_by_pauli:
+                rejected_by_dual += 1
+                continue
+
+        # Gate 3 — Multi-Copy Distribution
+        # Model: each error trial must independently fool N signature copies.
+        # Probability = (1/4)^N.  Sample Bernoulli to decide if it succeeds.
+        if rng.random() < forge_prob:
+            accepted_forgeries += 1
+        # else: the multi-copy check catches it (no counter increment needed)
+
+    return {
+        "accepted_forgeries": accepted_forgeries,
+        "rejected_by_nonce": rejected_by_nonce,
+        "rejected_by_dual": rejected_by_dual,
+        "blocked_by_chsh": False,
+        "forge_prob": forge_prob,
+        "alerts_raised": len(all_alerts),
+        "chsh_S": round(chsh_S, 5),
+        "n_trials": n,
+        "n_errors": sum(1 for l in logs if l.is_error),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Detector 1: QBER
 # ---------------------------------------------------------------------------
 
