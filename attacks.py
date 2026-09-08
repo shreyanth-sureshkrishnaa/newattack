@@ -1,5 +1,5 @@
 """
-attacks.py — Attack simulators for Q-ATT&CK.
+attacks.py — Attack simulators for SIGWATCH.
 
 Each attack is a callable (an "attack function") with signature:
     attack_fn(state, channel, rng, **kwargs) → Optional[Any]

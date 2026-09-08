@@ -1,5 +1,5 @@
 """
-qsim.py — Quantum state-vector simulator core for Q-ATT&CK.
+qsim.py — Quantum state-vector simulator core for SIGWATCH.
 
 Pure NumPy, no external quantum SDK.  Big-endian (physics) convention:
 qubit 0 is the MOST-significant bit in every basis label.

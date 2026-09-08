@@ -1,5 +1,5 @@
 """
-qds.py — QDS protocol, trial execution, and data structures for Q-ATT&CK.
+qds.py — QDS protocol, trial execution, and data structures for SIGWATCH.
 
 Teleportation-based Quantum Digital Signature protocol:
 
@@ -49,7 +49,7 @@ from noise import depolarizing_channel, clip_prob
 @dataclass
 class TrialLog:
     """
-    Complete record of one Q-ATT&CK trial.
+    Complete record of one SIGWATCH trial.
 
     Fields are organized by the four physical channels they belong to
     (see non-negotiable design principle #8 and module docstring).

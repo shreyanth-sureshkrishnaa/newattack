@@ -1,5 +1,5 @@
 """
-noise.py — Shared depolarizing noise model for Q-ATT&CK.
+noise.py — Shared depolarizing noise model for SIGWATCH.
 
 ALL noise in the project flows through this single module.
 Do NOT implement depolarizing noise in any other file.

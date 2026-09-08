@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-runner.py — Master CLI runner for Q-ATT&CK.
+runner.py — Master CLI runner for SIGWATCH.
 
 Usage:
     python runner.py serve [--port 5050]
@@ -16,7 +16,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent
 
 def run_tests():
-    print("=== Running Q-ATT&CK Self-Test Suite ===")
+    print("=== Running SIGWATCH Self-Test Suite ===")
     modules = [
         "qsim.py",
         "noise.py",
@@ -44,12 +44,12 @@ def run_benchmark():
         sys.exit(res.returncode)
 
 def serve_dashboard(port=5050):
-    print(f"=== Starting Q-ATT&CK Live Server on http://localhost:{port} ===")
+    print(f"=== Starting SIGWATCH Live Server on http://localhost:{port} ===")
     from api import app
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)
 
 def main():
-    parser = argparse.ArgumentParser(description="Q-ATT&CK Master CLI Runner")
+    parser = argparse.ArgumentParser(description="SIGWATCH Master CLI Runner")
     subparsers = parser.add_subparsers(dest="command", help="Available subcommands")
 
     # serve command

@@ -1,4 +1,4 @@
-# Q-ATT&CK — Quantum Digital Signature Threat Detection Framework
+# SIGWATCH — Quantum Digital Signature Threat Detection Framework
 
 A quantum-inspired, non-machine-learning cyber threat detection framework for teleportation-based Quantum Digital Signature (QDS) protocols.
 
@@ -6,11 +6,12 @@ A quantum-inspired, non-machine-learning cyber threat detection framework for te
 
 ## 1. Architectural Overview
 
-Q-ATT&CK implements a high-fidelity quantum simulation stack (pure NumPy state-vector physics) combined with closed-form statistical anomaly detectors to identify quantum cyber attacks on quantum digital signature schemes.
+SIGWATCH implements a high-fidelity quantum simulation stack (pure NumPy state-vector physics) combined with closed-form statistical anomaly detectors to identify quantum cyber attacks on quantum digital signature schemes.
 
 ```
+
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                           Q-ATT&CK ARCHITECTURE                         │
+│                           SIGWATCH ARCHITECTURE                         │
 └─────────────────────────────────────────────────────────────────────────┘
    [Layer 1: qsim.py]       State-Vector Quantum Simulator (Pure NumPy)
    [Layer 2: bell.py]       Bell Pair Generation, CHSH Tests & Teleportation
@@ -22,6 +23,7 @@ Q-ATT&CK implements a high-fidelity quantum simulation stack (pure NumPy state-v
    [Layer 8: benchmark.py]  Sweep Suite & Calibration / FPR Validation
    [Layer 9: api.py]        Flask REST API with SSE Real-Time Event Stream
    [Layer 10: dashboard/]   Dark-Themed Live Control Center & Visualization
+
 ```
 
 ---
@@ -71,7 +73,7 @@ All detectors are pure deterministic functions evaluated against the null hypoth
 
 ---
 
-## 3. Threat Matrix (Q-ATT&CK)
+## 3. Threat Matrix (SIGWATCH)
 
 | ID | Attack Vector | MITRE ATT&CK Tactic | Physical Channel Modified | Primary Detector | Analytical Effect |
 |:---|:---|:---|:---|:---|:---|

@@ -1,5 +1,5 @@
 """
-qotp.py — Quantum One-Time Pad (QOTP) layer for Q-ATT&CK.
+qotp.py — Quantum One-Time Pad (QOTP) layer for SIGWATCH.
 
 The QOTP applies Pauli operators controlled by a two-bit classical key
 (key_a, key_b) ∈ {0,1}² to a single qubit:

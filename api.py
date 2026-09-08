@@ -1,5 +1,5 @@
 """
-api.py — Flask REST API for Q-ATT&CK.
+api.py — Flask REST API for SIGWATCH.
 
 Endpoints:
   POST /api/run          — run a batch of trials, returns logs + alerts
@@ -480,5 +480,5 @@ def sse_stream():
 if __name__ == "__main__":
     import sys
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 5050
-    print(f"Q-ATT&CK API server starting on http://localhost:{port}")
+    print(f"SIGWATCH API server starting on http://localhost:{port}")
     app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

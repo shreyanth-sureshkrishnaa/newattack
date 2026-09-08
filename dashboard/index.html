@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Q-ATT&CK — Quantum Digital Signature Threat Detection Workbench</title>
+  <title>SIGWATCH — Quantum Digital Signature Threat Detection Workbench</title>
   <meta name="description" content="Quantum-inspired, non-ML cyber threat detection framework for teleportation-based Quantum Digital Signature (QDS) protocols." />
 
   <!-- Academic / Scientific Typography -->
@@ -22,7 +22,7 @@
   <header class="top-header">
     <div class="header-content">
       <div class="brand-group">
-        <h1 class="brand-name">Q-ATT&amp;CK</h1>
+        <h1 class="brand-name">SIGWATCH</h1>
         <span class="brand-divider">/</span>
         <span class="brand-sub">Quantum Digital Signature Threat Detection Workbench</span>
       </div>
@@ -54,8 +54,148 @@
       <div class="modal-body">
         <form id="payload-modal-form" onsubmit="return false;">
           
+          <!-- Template Payloads Quick Selection -->
+          <div class="modal-section-title">1. Attack Template Payloads (Demonstration Presets)</div>
+          <div class="payload-template-grid" id="payload-template-grid">
+            
+            <!-- Template 1: Clean Baseline H0 -->
+            <div class="payload-template-card" data-template="clean">
+              <div class="template-card-header">
+                <span class="template-badge badge-clean">H₀ NULL</span>
+                <span class="template-tag">Baseline</span>
+              </div>
+              <div class="template-title">Clean Teleportation (H₀)</div>
+              <div class="template-desc">Pristine teleportation channel under physical noise baseline.</div>
+              <div class="template-meta-row">
+                <span class="meta-pill">N = 250</span>
+                <span class="meta-pill">p = 0.020</span>
+                <span class="meta-pill">η = 0.00</span>
+              </div>
+              <div class="template-sig-preview sig-clean">
+                <strong>Expected Output:</strong> S ≈ 2.828 &bull; Q̂ ≤ 2.0% &bull; 0 Alerts &bull; 100% Valid
+              </div>
+            </div>
+
+            <!-- Template 2: Intercept-Resend (IR) -->
+            <div class="payload-template-card" data-template="IR">
+              <div class="template-card-header">
+                <span class="template-badge badge-ir">IR ATTACK</span>
+                <span class="template-tag">Bell Collapse</span>
+              </div>
+              <div class="template-title">Intercept-Resend (IR)</div>
+              <div class="template-desc">Eve measures Bob's EPR qubit in random {Z, X} basis &amp; re-prepares fresh state.</div>
+              <div class="template-meta-row">
+                <span class="meta-pill">N = 280</span>
+                <span class="meta-pill">p = 0.020</span>
+                <span class="meta-pill">η = 0.85</span>
+              </div>
+              <div class="template-sig-preview sig-ir">
+                <strong>Expected Output:</strong> S &lt; 2.0 (plunges to ~1.45) &bull; Q̂ ≈ 22% &bull; CHSH + QBER Alert
+              </div>
+            </div>
+
+            <!-- Template 3: Entanglement Hijacking (EH) -->
+            <div class="payload-template-card" data-template="EH">
+              <div class="template-card-header">
+                <span class="template-badge badge-eh">EH ATTACK</span>
+                <span class="template-tag">Severed EPR</span>
+              </div>
+              <div class="template-title">Entanglement Hijacking (EH)</div>
+              <div class="template-desc">Eve substitutes Bob's Bell pair with independent random states (|0⟩ / |+⟩).</div>
+              <div class="template-meta-row">
+                <span class="meta-pill">N = 300</span>
+                <span class="meta-pill">p = 0.020</span>
+                <span class="meta-pill">η = 0.90</span>
+              </div>
+              <div class="template-sig-preview sig-eh">
+                <strong>Expected Output:</strong> S → 0 (~0.15) &bull; Q̂ ≈ 48% &bull; Catastrophic CHSH &amp; QBER Alert
+              </div>
+            </div>
+
+            <!-- Template 4: Pauli Forgery (PF) -->
+            <div class="payload-template-card active" data-template="PF">
+              <div class="template-card-header">
+                <span class="template-badge badge-pf">PF ATTACK</span>
+                <span class="template-tag">Payload Forgery</span>
+              </div>
+              <div class="template-title">Pauli Forgery (PF)</div>
+              <div class="template-desc">Eve injects Pauli X-gate into encrypted QOTP signature qubit in transit.</div>
+              <div class="template-meta-row">
+                <span class="meta-pill">N = 250</span>
+                <span class="meta-pill">p = 0.020</span>
+                <span class="meta-pill">η = 0.75</span>
+              </div>
+              <div class="template-sig-preview sig-pf">
+                <strong>Expected Output:</strong> S ≈ 2.828 (Untouched EPR) &bull; Q̂ ≈ 75% &bull; Pauli X-Syndrome Alert
+              </div>
+            </div>
+
+            <!-- Template 5: Correction Bit Manipulation (CBM) -->
+            <div class="payload-template-card" data-template="CBM">
+              <div class="template-card-header">
+                <span class="template-badge badge-cbm">CBM ATTACK</span>
+                <span class="template-tag">Feedforward Tamper</span>
+              </div>
+              <div class="template-title">Correction Bit Tamper (CBM)</div>
+              <div class="template-desc">Eve forces classical teleportation correction feedforward bits to (m₀, m₁) = (1, 1).</div>
+              <div class="template-meta-row">
+                <span class="meta-pill">N = 350</span>
+                <span class="meta-pill">p = 0.020</span>
+                <span class="meta-pill">η = 0.80</span>
+              </div>
+              <div class="template-sig-preview sig-cbm">
+                <strong>Expected Output:</strong> S ≈ 2.828 (Untouched) &bull; |11⟩ Distribution Skew &bull; Pearson χ² Alert
+              </div>
+            </div>
+
+            <!-- Template 6: Stealth Low-Intensity Probe -->
+            <div class="payload-template-card" data-template="stealth">
+              <div class="template-card-header">
+                <span class="template-badge badge-stealth">STEALTH</span>
+                <span class="template-tag">Boundary Test</span>
+              </div>
+              <div class="template-title">Stealth Intercept Probe</div>
+              <div class="template-desc">Low-intensity quantum eavesdropping (η = 0.20) testing hypothesis test sensitivity bounds.</div>
+              <div class="template-meta-row">
+                <span class="meta-pill">N = 400</span>
+                <span class="meta-pill">p = 0.020</span>
+                <span class="meta-pill">η = 0.20</span>
+              </div>
+              <div class="template-sig-preview sig-stealth">
+                <strong>Expected Output:</strong> S ≈ 2.45 (Sub-Tsirelson) &bull; Q̂ ≈ 6.5% &bull; Statistical Boundary Alert
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Dynamic Output Telemetry Explainer Banner -->
+          <div class="template-details-banner" id="template-details-banner">
+            <div class="banner-header">
+              <span class="banner-title" id="banner-template-title">Pauli Forgery (PF) — Expected Output Telemetry &amp; Physics</span>
+              <span class="banner-channel" id="banner-template-channel">Target: Signature Qubit Channel (Payload Only)</span>
+            </div>
+            <div class="banner-grid">
+              <div class="banner-item">
+                <span class="banner-label">CHSH S-Parameter:</span>
+                <strong id="banner-chsh-desc">S ≈ 2.828 (Tsirelson Intact — Channel Isolation Verified)</strong>
+              </div>
+              <div class="banner-item">
+                <span class="banner-label">Expected QBER (Q̂):</span>
+                <strong id="banner-qber-desc">~75.0% (Deterministic 1-to-1 Bit-Flip over QOTP)</strong>
+              </div>
+              <div class="banner-item">
+                <span class="banner-label">Primary Active Detector:</span>
+                <strong id="banner-detector-desc">Pauli Error Asymmetry (X-syndrome spike) + QBER Test</strong>
+              </div>
+              <div class="banner-item">
+                <span class="banner-label">Correction Distribution:</span>
+                <strong id="banner-corr-desc">Uniform (p = 0.25 on {00, 01, 10, 11})</strong>
+              </div>
+            </div>
+          </div>
+
           <!-- Primary Simulation Parameters -->
-          <div class="modal-section-title">1. Quantum Attack Vector &amp; Physical Parameters</div>
+          <div class="modal-section-title">2. Fine-Tune Quantum Attack &amp; Physical Parameters</div>
           <div class="modal-grid-2col">
             <div class="field-item">
               <label for="modal-attack-type">Target Threat Vector</label>
@@ -547,7 +687,7 @@
 
   <footer class="bottom-footer">
     <div class="footer-inner">
-      <span><strong>Q-ATT&amp;CK</strong> &mdash; Quantum Digital Signature Threat Detection Framework</span>
+      <span><strong>SIGWATCH</strong> &mdash; Quantum Digital Signature Threat Detection Framework</span>
       <span>Pure State-Vector Physics &bull; Live Telemetry Workbench</span>
     </div>
   </footer>

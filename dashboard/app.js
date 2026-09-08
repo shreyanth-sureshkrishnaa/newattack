@@ -1,5 +1,5 @@
 /**
- * app.js — Q-ATT&CK Academic Research Workbench Client Engine
+ * app.js — SIGWATCH Academic Research Workbench Client Engine
  *
  * Includes:
  *  - Start Payload Modal Configuration
@@ -58,6 +58,160 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Attack Vector Template Payload Presets
+// ---------------------------------------------------------------------------
+const PAYLOAD_TEMPLATES = {
+  clean: {
+    id: "clean",
+    name: "Clean Teleportation (Null Hypothesis H₀)",
+    attackType: "clean",
+    nTrials: 250,
+    intensity: 0.00,
+    noiseLevel: 0.020,
+    qberAlpha: 0.010,
+    chshAlpha: 0.010,
+    pauliAlpha: 0.010,
+    corrAlpha: 0.010,
+    channel: "Target: Full Quantum + Classical Channel (H₀ Baseline)",
+    chshDesc: "S ≈ 2.828 (Tsirelson Bound Intact — Non-Local Entanglement)",
+    qberDesc: "≤ 2.0% (Physical Depolarizing Baseline Noise Only)",
+    detectorDesc: "Zero Alerts (All Observables Conform to Null Hypothesis)",
+    corrDesc: "Uniform (p = 0.25 on {00, 01, 10, 11})"
+  },
+  IR: {
+    id: "IR",
+    name: "Intercept-Resend Attack (IR)",
+    attackType: "IR",
+    nTrials: 280,
+    intensity: 0.85,
+    noiseLevel: 0.020,
+    qberAlpha: 0.010,
+    chshAlpha: 0.010,
+    pauliAlpha: 0.010,
+    corrAlpha: 0.010,
+    channel: "Target: Entangled Bell Channel (qds_bell + chsh_bell)",
+    chshDesc: "S < 2.0 (Drops to ~1.45 — Bell Entanglement Destroyed)",
+    qberDesc: "≈ 20% – 25% (Eve Guesses Basis Incorrectly 50% of Time)",
+    detectorDesc: "Dual Alerts: CHSH Collapse + QBER Gaussian Z-Score",
+    corrDesc: "Uniform (p = 0.25 on {00, 01, 10, 11})"
+  },
+  EH: {
+    id: "EH",
+    name: "Entanglement Hijacking (EH)",
+    attackType: "EH",
+    nTrials: 300,
+    intensity: 0.90,
+    noiseLevel: 0.020,
+    qberAlpha: 0.010,
+    chshAlpha: 0.010,
+    pauliAlpha: 0.010,
+    corrAlpha: 0.010,
+    channel: "Target: Entangled Bell Channel (Complete State Substitution)",
+    chshDesc: "S → 0 (~0.15 — Product State / Zero Quantum Correlation)",
+    qberDesc: "≈ 45% – 50% (Measurements on Independent Substituted State)",
+    detectorDesc: "Severe CHSH Non-Locality Collapse + Severe QBER Surges",
+    corrDesc: "Uniform (p = 0.25 on {00, 01, 10, 11})"
+  },
+  PF: {
+    id: "PF",
+    name: "Pauli Forgery (PF)",
+    attackType: "PF",
+    nTrials: 250,
+    intensity: 0.75,
+    noiseLevel: 0.020,
+    qberAlpha: 0.010,
+    chshAlpha: 0.010,
+    pauliAlpha: 0.010,
+    corrAlpha: 0.010,
+    channel: "Target: Signature Qubit Channel (Payload Only)",
+    chshDesc: "S ≈ 2.828 (Tsirelson Intact — Channel Isolation Verified)",
+    qberDesc: "≈ 75.0% (Deterministic 1-to-1 Bit-Flip over QOTP)",
+    detectorDesc: "Pauli Error Asymmetry (X-Syndrome Spike) + QBER Test",
+    corrDesc: "Uniform (p = 0.25 on {00, 01, 10, 11})"
+  },
+  CBM: {
+    id: "CBM",
+    name: "Correction Bit Manipulation (CBM)",
+    attackType: "CBM",
+    nTrials: 350,
+    intensity: 0.80,
+    noiseLevel: 0.020,
+    qberAlpha: 0.010,
+    chshAlpha: 0.010,
+    pauliAlpha: 0.010,
+    corrAlpha: 0.010,
+    channel: "Target: Classical Teleportation Feedforward Bits (m0, m1)",
+    chshDesc: "S ≈ 2.828 (Untouched Quantum Bell Entanglement)",
+    qberDesc: "≈ 60.0% (Induced by False ZX Unitary Corrections)",
+    detectorDesc: "Pearson χ² Uniformity Alert (p-value < 10⁻⁶) + QBER Test",
+    corrDesc: "Skewed to |11⟩ (Over-represented due to Tampered Bits)"
+  },
+  stealth: {
+    id: "stealth",
+    name: "Stealth Low-Intensity Intercept Probe",
+    attackType: "IR",
+    nTrials: 400,
+    intensity: 0.20,
+    noiseLevel: 0.020,
+    qberAlpha: 0.010,
+    chshAlpha: 0.010,
+    pauliAlpha: 0.010,
+    corrAlpha: 0.010,
+    channel: "Target: Quantum Channel Boundary (Subtle Eavesdropping)",
+    chshDesc: "S ≈ 2.45 (Degraded Below Tsirelson, Probing Threshold α)",
+    qberDesc: "≈ 6.5% – 7.5% (Elevated Above Baseline Noise 2.0%)",
+    detectorDesc: "Statistical Hypothesis Boundary Test (Bounded False Alarms)",
+    corrDesc: "Uniform (p = 0.25 on {00, 01, 10, 11})"
+  }
+};
+
+function selectPayloadTemplate(templateKey) {
+  const tmpl = PAYLOAD_TEMPLATES[templateKey];
+  if (!tmpl) return;
+
+  // Highlight active template card
+  document.querySelectorAll(".payload-template-card").forEach((card) => {
+    card.classList.toggle("active", card.getAttribute("data-template") === templateKey);
+  });
+
+  // Populate form fields
+  const attackSelect = document.getElementById("modal-attack-type");
+  if (attackSelect) attackSelect.value = tmpl.attackType;
+
+  const nInput = document.getElementById("modal-n-trials");
+  if (nInput) nInput.value = tmpl.nTrials;
+
+  const intensitySlider = document.getElementById("modal-slider-intensity");
+  const intensityDisp = document.getElementById("modal-disp-intensity");
+  if (intensitySlider) {
+    intensitySlider.value = tmpl.intensity;
+    if (intensityDisp) intensityDisp.textContent = Number(tmpl.intensity).toFixed(2);
+  }
+
+  const noiseSlider = document.getElementById("modal-slider-noise");
+  const noiseDisp = document.getElementById("modal-disp-noise");
+  if (noiseSlider) {
+    noiseSlider.value = tmpl.noiseLevel;
+    if (noiseDisp) noiseDisp.textContent = Number(tmpl.noiseLevel).toFixed(3);
+  }
+
+  // Update dynamic explainer banner
+  const titleEl = document.getElementById("banner-template-title");
+  const channelEl = document.getElementById("banner-template-channel");
+  const chshEl = document.getElementById("banner-chsh-desc");
+  const qberEl = document.getElementById("banner-qber-desc");
+  const detEl = document.getElementById("banner-detector-desc");
+  const corrEl = document.getElementById("banner-corr-desc");
+
+  if (titleEl) titleEl.textContent = `${tmpl.name} — Expected Output Telemetry & Physics`;
+  if (channelEl) channelEl.textContent = tmpl.channel;
+  if (chshEl) chshEl.textContent = tmpl.chshDesc;
+  if (qberEl) qberEl.textContent = tmpl.qberDesc;
+  if (detEl) detEl.textContent = tmpl.detectorDesc;
+  if (corrEl) corrEl.textContent = tmpl.corrDesc;
+}
+
+// ---------------------------------------------------------------------------
 // Modal Dialog Handling
 // ---------------------------------------------------------------------------
 function initModalEvents() {
@@ -90,10 +244,38 @@ function initModalEvents() {
   });
 
   btnClean.addEventListener("click", () => {
-    document.getElementById("modal-attack-type").value = "clean";
+    selectPayloadTemplate("clean");
     runQuantumBatchFromModal("clean");
     closeModal();
   });
+
+  // Template card click and double-click handlers
+  document.querySelectorAll(".payload-template-card").forEach((card) => {
+    card.addEventListener("click", () => {
+      const templateKey = card.getAttribute("data-template");
+      selectPayloadTemplate(templateKey);
+    });
+
+    card.addEventListener("dblclick", () => {
+      const templateKey = card.getAttribute("data-template");
+      selectPayloadTemplate(templateKey);
+      runQuantumBatchFromModal();
+      closeModal();
+    });
+  });
+
+  // Sync threat vector select change with templates
+  const attackSelect = document.getElementById("modal-attack-type");
+  if (attackSelect) {
+    attackSelect.addEventListener("change", (e) => {
+      const val = e.target.value;
+      if (PAYLOAD_TEMPLATES[val]) {
+        selectPayloadTemplate(val);
+      } else {
+        document.querySelectorAll(".payload-template-card").forEach((c) => c.classList.remove("active"));
+      }
+    });
+  }
 
   // Modal slider readouts
   document.getElementById("modal-slider-intensity").addEventListener("input", (e) => {
@@ -112,6 +294,9 @@ function initModalEvents() {
       pushConfigFromServerModal();
     });
   });
+
+  // Initial sync with default active template
+  selectPayloadTemplate("PF");
 }
 
 function pushConfigFromServerModal() {

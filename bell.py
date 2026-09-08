@@ -1,5 +1,5 @@
 """
-bell.py — Bell pair generation and teleportation protocol for Q-ATT&CK.
+bell.py — Bell pair generation and teleportation protocol for SIGWATCH.
 
 This module implements the quantum primitives used by the QDS layer.
 All functions are stateless; they accept and return QuantumState objects.

@@ -1,5 +1,5 @@
 """
-detectors.py — Statistical detectors for Q-ATT&CK.
+detectors.py — Statistical detectors for SIGWATCH.
 
 All detectors are PURE FUNCTIONS:
     detect_*(logs, config) -> List[Alert]

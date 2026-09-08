@@ -1,4 +1,4 @@
-# Q-ATT&CK Simulation Speed & Performance Benchmark
+# SIGWATCH Simulation Speed & Performance Benchmark
 
 **Benchmark Date:** September 2026  
 **Execution Environment:** Linux x86_64, Python 3.14.7, NumPy 2.5.3, SciPy 1.18.1  

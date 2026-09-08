@@ -1,5 +1,5 @@
 """
-benchmark.py — Evaluation suite for Q-ATT&CK.
+benchmark.py — Evaluation suite for SIGWATCH.
 
 Sweeps noise_level × attack_type × intensity, producing a results table
 that the dashboard reads for the detection-rate-vs-intensity curve.

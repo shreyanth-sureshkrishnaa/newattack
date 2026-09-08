@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-perf_benchmark.py — Comprehensive Speed & Simulation Performance Benchmark for Q-ATT&CK.
+perf_benchmark.py — Comprehensive Speed & Simulation Performance Benchmark for SIGWATCH.
 
 Measures:
   1. Per-layer quantum execution latency (qsim, bell, qotp, qds, noise, detectors).
@@ -158,7 +158,7 @@ def measure_detector_speed(N=2000):
     }
 
 def generate_markdown_report(layer_res, scaling_res, attack_res, detector_res):
-    md = f"""# Q-ATT&CK Simulation Speed & Performance Benchmark
+    md = f"""# SIGWATCH Simulation Speed & Performance Benchmark
 
 **Benchmark Date:** September 2026  
 **Execution Environment:** Linux x86_64, Python 3.14.7, NumPy 2.5.3, SciPy 1.18.1  
@@ -243,7 +243,7 @@ Latency of non-ML statistical decision engine (Gaussian Z-score QBER + CHSH Bell
     return md
 
 def main():
-    print("=== Running Q-ATT&CK Performance & Simulation Benchmark ===")
+    print("=== Running SIGWATCH Performance & Simulation Benchmark ===")
     print("1/4 Measuring layer latencies...")
     layer_res = measure_layer_latencies(n_iter=5000)
     print(f"    Teleportation circuit: {layer_res['teleportation_circuit_us']:.2f} us")

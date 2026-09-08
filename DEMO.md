@@ -1,6 +1,6 @@
-# Q-ATT&CK — Live Demonstration Guide & Presentation Script
+# SIGWATCH — Live Demonstration Guide & Presentation Script
 
-This guide outlines a step-by-step walkthrough to demonstrate the **Q-ATT&CK** Quantum Cyber Threat Detection Workbench to quantum physicists, cryptographers, and cybersecurity evaluators.
+This guide outlines a step-by-step walkthrough to demonstrate the **SIGWATCH** Quantum Cyber Threat Detection Workbench to quantum physicists, cryptographers, and cybersecurity evaluators.
 
 ---
 
@@ -18,7 +18,7 @@ Open **`http://localhost:5055`** in your browser.
 ## 2. 5-Minute Demonstration Script
 
 ### Scene 1: The Elevator Pitch (30 seconds)
-> *"Welcome to Q-ATT&CK. Quantum Digital Signatures (QDS) provide information-theoretic non-repudiation and integrity using quantum teleportation and Quantum One-Time Pads. However, when deployed over optical fiber channels, how do we distinguish benign physical noise from active adversarial tampering without relying on opaque machine learning? Q-ATT&CK is a non-ML, physics-grounded cyber threat detection workbench with closed-form statistical hypothesis testing."*
+> *"Welcome to SIGWATCH. Quantum Digital Signatures (QDS) provide information-theoretic non-repudiation and integrity using quantum teleportation and Quantum One-Time Pads. However, when deployed over optical fiber channels, how do we distinguish benign physical noise from active adversarial tampering without relying on opaque machine learning? SIGWATCH is a non-ML, physics-grounded cyber threat detection workbench with closed-form statistical hypothesis testing."*
 
 ---
 
