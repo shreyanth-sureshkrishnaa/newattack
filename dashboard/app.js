@@ -424,78 +424,69 @@ function initAllCharts() {
     },
   });
 
-  // 2. Live CHSH with Vivid Multi-Layer Datapoints & Active Head Marker
-  const ctxChsh = document.getElementById("liveChshChart").getContext("2d");
-  charts.liveChsh = new Chart(ctxChsh, {
+  // 2. Quantum Security Score — category x-axis, updates every trial
+  //    Score = clamp(100 * (S/2.828) * (1 - QBER), 0, 100)
+  //    100 = perfectly quantum-secure, 0 = channel fully compromised
+  const ctxSec = document.getElementById("liveSecurityChart").getContext("2d");
+  charts.liveChsh = new Chart(ctxSec, {
     type: "line",
     data: {
       labels: [],
       datasets: [
         {
-          label: "Running Cumulative CHSH S(N)",
+          // ds[0] — Running security score (smooth area fill)
+          label: "Quantum Security Score",
           data: [],
-          borderColor: "#7c3aed",
-          backgroundColor: "rgba(124, 58, 237, 0.08)",
-          borderWidth: 3,
+          borderColor: "#6366f1",
+          backgroundColor: (ctx) => {
+            const chart = ctx.chart;
+            const { ctx: c, chartArea } = chart;
+            if (!chartArea) return "rgba(99,102,241,0.15)";
+            const grad = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            grad.addColorStop(0, "rgba(99,102,241,0.45)");
+            grad.addColorStop(0.5, "rgba(99,102,241,0.15)");
+            grad.addColorStop(1, "rgba(99,102,241,0.01)");
+            return grad;
+          },
+          borderWidth: 2.5,
           pointRadius: 0,
           fill: true,
-          tension: 0.15,
-          yAxisID: "y",
+          tension: 0.35,
           order: 2,
         },
         {
-          label: "Single-Pair Bell Product (s_A · s_B)",
+          // ds[1] — Red dots on trials where score drops below 50 (threat)
+          label: "Threat Detected (Score < 50)",
           data: [],
-          type: "scatter",
-          borderColor: function(context) {
-            const v = context.raw ? context.raw.y : 1;
-            return v > 0 ? "#059669" : "#dc2626";
-          },
-          backgroundColor: function(context) {
-            const v = context.raw ? context.raw.y : 1;
-            return v > 0 ? "rgba(16, 185, 129, 0.85)" : "rgba(244, 63, 94, 0.85)";
-          },
-          pointRadius: 4,
-          pointHoverRadius: 7,
+          borderColor: "#ef4444",
+          backgroundColor: "rgba(239,68,68,0.9)",
+          pointRadius: 5,
+          pointHoverRadius: 8,
           borderWidth: 1.5,
           showLine: false,
-          yAxisID: "yScatter",
+          spanGaps: false,
           order: 1,
         },
         {
-          label: "Active Calculation Front",
+          // ds[2] — Safe zone reference at 80
+          label: "Secure Threshold (80)",
           data: [],
-          type: "scatter",
-          borderColor: "#8b5cf6",
-          backgroundColor: "#ffffff",
-          borderWidth: 3,
-          pointRadius: 6,
-          pointHoverRadius: 8,
-          pointStyle: "circle",
-          showLine: false,
-          yAxisID: "y",
-          order: 0,
-        },
-        {
-          label: "Tsirelson Bound (2√2 ≈ 2.828)",
-          data: [],
-          borderColor: "#059669",
-          borderWidth: 2,
-          borderDash: [6, 3],
+          borderColor: "#10b981",
+          borderWidth: 1.5,
+          borderDash: [6, 4],
           pointRadius: 0,
           fill: false,
-          yAxisID: "y",
           order: 3,
         },
         {
-          label: "Classical Bell Bound (S = 2.0)",
+          // ds[3] — Danger zone reference at 50
+          label: "Danger Threshold (50)",
           data: [],
-          borderColor: "#e11d48",
-          borderWidth: 2,
+          borderColor: "#f59e0b",
+          borderWidth: 1.5,
           borderDash: [4, 4],
           pointRadius: 0,
           fill: false,
-          yAxisID: "y",
           order: 4,
         },
       ],
@@ -503,36 +494,29 @@ function initAllCharts() {
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      interaction: {
-        mode: 'nearest',
-        axis: 'x',
-        intersect: false,
-      },
+      animation: false,
+      interaction: { mode: "index", intersect: false },
       scales: {
         x: {
           grid: { color: gridColor },
-          ticks: { font: fontMono, color: tickColor },
-          title: { display: true, text: "Individual Quantum Trial Index", font: fontMain, color: "#334155" },
+          ticks: {
+            font: fontMono,
+            color: tickColor,
+            maxTicksLimit: 12,
+            autoSkip: true,
+          },
+          title: { display: true, text: "Trial Index", font: fontMain, color: "#334155" },
         },
         y: {
           min: 0,
-          max: 3.5,
-          position: "left",
+          max: 100,
           grid: { color: gridColor },
-          ticks: { font: fontMono, color: tickColor },
-          title: { display: true, text: "CHSH Correlator S", font: fontMain, color: "#334155" },
-        },
-        yScatter: {
-          min: -1.6,
-          max: 1.6,
-          position: "right",
-          grid: { drawOnChartArea: false },
           ticks: {
             font: fontMono,
-            color: "#64748b",
-            callback: (v) => (v === 1 ? "+1 (Aligned)" : v === -1 ? "-1 (Anti)" : ""),
+            color: tickColor,
+            callback: (v) => `${v}`,
           },
-          title: { display: true, text: "Trial Product (s_A · s_B)", font: fontMain, color: "#64748b" },
+          title: { display: true, text: "Security Score (0–100)", font: fontMain, color: "#334155" },
         },
       },
       plugins: {
@@ -540,33 +524,24 @@ function initAllCharts() {
           labels: { font: fontMain, color: "#0f172a", boxWidth: 12, usePointStyle: true },
         },
         tooltip: {
-          backgroundColor: "rgba(15, 23, 42, 0.95)",
-          titleFont: { family: "'Inter', sans-serif", size: 12, weight: "bold" },
-          bodyFont: { family: "'JetBrains Mono', monospace", size: 11 },
+          backgroundColor: "rgba(15,23,42,0.95)",
+          titleFont: { family: "'Inter',sans-serif", size: 12, weight: "bold" },
+          bodyFont: { family: "'JetBrains Mono',monospace", size: 11 },
           padding: 10,
           cornerRadius: 6,
           callbacks: {
-            title: function(context) {
-              return `Quantum Trial #${context[0].label || (context[0].raw && context[0].raw.x)}`;
-            },
-            label: function(context) {
-              const dsIndex = context.datasetIndex;
-              if (dsIndex === 0) {
-                const sVal = Number(context.raw).toFixed(3);
-                const status = sVal >= 2.0 ? "Quantum Non-Local" : "Classical Bell Broken";
-                return `Running CHSH S: ${sVal} (${status})`;
-              } else if (dsIndex === 1) {
-                const prod = context.raw ? context.raw.y : 0;
-                const align = prod > 0 ? "Aligned (+1)" : "Anti-Aligned (-1)";
-                return `Bell Product (s_A · s_B): ${prod > 0 ? '+1' : '-1'} [${align}]`;
-              } else if (dsIndex === 2) {
-                return `Active Trial Lead: S = ${Number(context.raw?.y).toFixed(3)}`;
-              } else if (dsIndex === 3) {
-                return `Tsirelson Bound: 2.8284 (Quantum Limit)`;
-              } else if (dsIndex === 4) {
-                return `Classical Bell Limit: 2.0000 (Local Realism)`;
+            title: (ctx) => `Trial ${ctx[0].label}`,
+            label: (ctx) => {
+              const di = ctx.datasetIndex;
+              const v = Number(ctx.raw).toFixed(1);
+              if (di === 0) {
+                const status = Number(v) >= 80 ? "✅ Secure" : Number(v) >= 50 ? "⚠️ Degraded" : "🚨 Compromised";
+                return `Security Score: ${v} — ${status}`;
               }
-              return context.formattedValue;
+              if (di === 1) return `Threat Event: Score ${v} < 50`;
+              if (di === 2) return `Secure Threshold: 80`;
+              if (di === 3) return `Danger Threshold: 50`;
+              return ctx.formattedValue;
             },
           },
         },
@@ -870,7 +845,6 @@ function plotIndividualTrialDatapointsAnimated(trials, summ, alerts) {
   charts.liveChsh.data.datasets[1].data = [];
   charts.liveChsh.data.datasets[2].data = [];
   charts.liveChsh.data.datasets[3].data = [];
-  charts.liveChsh.data.datasets[4].data = [];
   charts.liveChsh.update('none');
 
   const baseGlobalTrials = state.totalTrials;
@@ -885,18 +859,21 @@ function plotIndividualTrialDatapointsAnimated(trials, summ, alerts) {
   const trialScatterQber = [];
   const qberNullLine = [];
 
-  const runningChsh = [];
-  const trialScatterChsh = [];
-  const tsirelsonLine = [];
-  const classicalLine = [];
+  // Security score accumulators
+  const securityScoreData = [];   // ds[0] — running score per trial
+  const threatDots = [];           // ds[1] — red dots when score < 50
+  const secureThreshLine = [];    // ds[2] — green dashed at 80
+  const dangerThreshLine = [];    // ds[3] — amber dashed at 50
 
-  let cumErrors = 0;
+  // Keep CHSH accumulators for the KPI metric card (metric-chsh) only
   const anglePairs = {
     "0,22.5": { sum: 0, count: 0 },
     "0,67.5": { sum: 0, count: 0 },
     "45,22.5": { sum: 0, count: 0 },
     "45,67.5": { sum: 0, count: 0 },
   };
+
+  let cumErrors = 0;
 
   let currentIndex = 0;
 
@@ -916,17 +893,23 @@ function plotIndividualTrialDatapointsAnimated(trials, summ, alerts) {
       document.getElementById("metric-chsh").textContent = summ.chsh_S.toFixed(3);
       document.getElementById("metric-verify-rate").textContent = `${((1 - summ.qber) * 100).toFixed(1)}%`;
 
-      // Update CHSH live pills
+      // Update Security Score badge at finalization
+      const finalScore = Math.max(0, Math.min(100,
+        100 * (Math.min(summ.chsh_S, 2.8284) / 2.8284) * (1 - summ.qber)
+      ));
       const pillEl = document.getElementById("chsh-live-status-pill");
       const sReadoutEl = document.getElementById("chsh-live-s-readout");
-      if (sReadoutEl) sReadoutEl.textContent = `S = ${summ.chsh_S.toFixed(3)}`;
+      if (sReadoutEl) sReadoutEl.textContent = `Score = ${finalScore.toFixed(1)}`;
       if (pillEl) {
-        if (summ.chsh_S >= 2.0) {
+        if (finalScore >= 80) {
           pillEl.className = "status-pill-quantum";
-          pillEl.textContent = `Quantum Entangled (S = ${summ.chsh_S.toFixed(3)} > 2.0)`;
+          pillEl.textContent = `Secure (${finalScore.toFixed(1)})`;
+        } else if (finalScore >= 50) {
+          pillEl.className = "status-pill-metric";
+          pillEl.textContent = `Degraded — Score ${finalScore.toFixed(1)}`;
         } else {
           pillEl.className = "status-pill-attack";
-          pillEl.textContent = `Classical / Attack Alert (S = ${summ.chsh_S.toFixed(3)} ≤ 2.0)`;
+          pillEl.textContent = `⚠ Compromised — Score ${finalScore.toFixed(1)}`;
         }
       }
 
@@ -949,65 +932,71 @@ function plotIndividualTrialDatapointsAnimated(trials, summ, alerts) {
     trialScatterQber.push({ x: trialIdx, y: t.is_error ? 1 : 0 });
     qberNullLine.push(summ.qber_null);
 
-    // CHSH calculation point
+    // ── CHSH S-parameter (for KPI card only) ──────────────────────────────
     const prod = t.chsh_a_sign * t.chsh_b_sign;
-    trialScatterChsh.push({ x: trialIdx, y: prod });
-
     const aDeg = Math.round((t.chsh_a_angle * 180) / Math.PI);
     const bDeg = (Math.round(((t.chsh_b_angle * 180) / Math.PI) * 10) / 10).toFixed(1);
     const angleKey = `${aDeg},${bDeg}`;
-
     if (anglePairs[angleKey]) {
       anglePairs[angleKey].sum += prod;
       anglePairs[angleKey].count++;
     }
-
     const e11 = anglePairs["0,22.5"].count > 0 ? anglePairs["0,22.5"].sum / anglePairs["0,22.5"].count : 0.707;
     const e12 = anglePairs["0,67.5"].count > 0 ? anglePairs["0,67.5"].sum / anglePairs["0,67.5"].count : -0.707;
     const e21 = anglePairs["45,22.5"].count > 0 ? anglePairs["45,22.5"].sum / anglePairs["45,22.5"].count : 0.707;
     const e22 = anglePairs["45,67.5"].count > 0 ? anglePairs["45,67.5"].sum / anglePairs["45,67.5"].count : 0.707;
     const currentS = Math.abs(e11 - e12 + e21 + e22);
-    runningChsh.push(currentS);
 
-    tsirelsonLine.push(2.8284);
-    classicalLine.push(2.0);
+    // ── Quantum Security Score ─────────────────────────────────────────────
+    // Score = 100 × (S / 2.8284) × (1 − QBER), clamped [0, 100]
+    // • High S + low QBER  → near 100 (perfectly quantum-secure)
+    // • Low S or high QBER → score collapses toward 0 (attack / noise)
+    const rawScore = 100 * (Math.min(currentS, 2.8284) / 2.8284) * (1 - currentQber);
+    const score = Math.max(0, Math.min(100, rawScore));
 
-    // Update QBER Chart dynamically
+    securityScoreData.push(score);
+    secureThreshLine.push(80);
+    dangerThreshLine.push(50);
+    // Red threat dot: push the score value at this label index when score < 50, else null
+    threatDots.push((trialIdx >= 10 && score < 50) ? score : null);
+
+    // ── Update QBER Chart ─────────────────────────────────────────────────
     charts.liveQber.data.labels = labels;
     charts.liveQber.data.datasets[0].data = runningQber;
     charts.liveQber.data.datasets[1].data = trialScatterQber;
     charts.liveQber.data.datasets[2].data = qberNullLine;
     charts.liveQber.update('none');
 
-    // Update CHSH Chart dynamically with Active Head Lead Marker
+    // ── Update Security Score Chart ───────────────────────────────────────
     charts.liveChsh.data.labels = labels;
-    charts.liveChsh.data.datasets[0].data = runningChsh;
-    charts.liveChsh.data.datasets[1].data = trialScatterChsh;
-    charts.liveChsh.data.datasets[2].data = [{ x: trialIdx, y: currentS }];
-    charts.liveChsh.data.datasets[3].data = tsirelsonLine;
-    charts.liveChsh.data.datasets[4].data = classicalLine;
+    charts.liveChsh.data.datasets[0].data = securityScoreData;
+    charts.liveChsh.data.datasets[1].data = threatDots;
+    charts.liveChsh.data.datasets[2].data = secureThreshLine;
+    charts.liveChsh.data.datasets[3].data = dangerThreshLine;
     charts.liveChsh.update('none');
 
-    // Update live global trial counter readout
+    // ── Update global trial counter ───────────────────────────────────────
     document.getElementById("global-trial-count").textContent = (baseGlobalTrials + trialIdx).toLocaleString();
 
-    // Update KPI card values live as calculations stream in
+    // ── Update KPI cards live ─────────────────────────────────────────────
     document.getElementById("metric-qber").textContent = `${(currentQber * 100).toFixed(2)}%`;
     document.getElementById("metric-chsh").textContent = currentS.toFixed(3);
     document.getElementById("metric-verify-rate").textContent = `${((1 - currentQber) * 100).toFixed(1)}%`;
 
-    // Update live CHSH telemetry header badges
+    // ── Update security score badge ───────────────────────────────────────
     const pillEl = document.getElementById("chsh-live-status-pill");
     const sReadoutEl = document.getElementById("chsh-live-s-readout");
-
-    if (sReadoutEl) sReadoutEl.textContent = `S = ${currentS.toFixed(3)}`;
+    if (sReadoutEl) sReadoutEl.textContent = `Score = ${score.toFixed(1)}`;
     if (pillEl) {
-      if (currentS >= 2.0) {
+      if (score >= 80) {
         pillEl.className = "status-pill-quantum";
-        pillEl.textContent = `Quantum Entangled (S = ${currentS.toFixed(3)} > 2.0)`;
+        pillEl.textContent = `Secure (${score.toFixed(1)})`;
+      } else if (score >= 50) {
+        pillEl.className = "status-pill-metric";
+        pillEl.textContent = `Degraded — Score ${score.toFixed(1)}`;
       } else {
         pillEl.className = "status-pill-attack";
-        pillEl.textContent = `Classical / Attack Alert (S = ${currentS.toFixed(3)} ≤ 2.0)`;
+        pillEl.textContent = `⚠ Threat Detected — Score ${score.toFixed(1)}`;
       }
     }
 
